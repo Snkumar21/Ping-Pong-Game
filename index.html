@@ -3,8 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/x-icon" href="icon.jpg" />
     <title>Ping Pong AI</title>
+
+    <style>
+        /* Reset default margin and padding */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #282c34;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Heading Style */
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+            letter-spacing: 2px;
+        }
+
+        /* Pong Canvas */
+        .pongCanvas {
+            background-color: black;
+            border: 2px solid white;
+            display: block;
+            max-width: 100%;
+            width: 800px;
+            height: 400px;
+        }
+
+        /* Button Styling */
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            background-color: #ff9800;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 5px;
+            border-radius: 5px;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            background-color: #e68900;
+        }
+    </style>
 </head>
 <body>
     <h1>PING PONG GAME</h1>
@@ -19,6 +78,162 @@
         <button id="resumeBtn">Resume</button>
     </div>
 
-    <script src="ping_pong.js"></script>
+    <script>
+        const canvas = document.getElementById("pongCanvas");
+        const context = canvas.getContext("2d");
+
+        // Paddle parameters
+        const paddleWidth = 10;
+        const paddleHeight = 50;
+        const playerSpeed = 5;
+        const aiSpeed = 4;
+
+        // Ball parameters
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        let ballSpeedX = 3;
+        let ballSpeedY = 3;
+        const ballRadius = 5;
+
+        // Paddle positions
+        let playerY = (canvas.height - paddleHeight) / 2;
+        let aiY = (canvas.height - paddleHeight) / 2;
+
+        // Player controls
+        let upPressed = false;
+        let downPressed = false;
+
+        // Game state
+        let gameRunning = false;
+        let animationFrameId;
+
+        document.addEventListener("keydown", keyDownHandler);
+        document.addEventListener("keyup", keyUpHandler);
+
+        function keyDownHandler(e) {
+            if (e.key === "Up" || e.key === "ArrowUp") {
+                upPressed = true;
+            } else if (e.key === "Down" || e.key === "ArrowDown") {
+                downPressed = true;
+            }
+        }
+
+        function keyUpHandler(e) {
+            if (e.key === "Up" || e.key === "ArrowUp") {
+                upPressed = false;
+            } else if (e.key === "Down" || e.key === "ArrowDown") {
+                downPressed = false;
+            }
+        }
+
+        function drawPaddle(x, y) {
+            context.fillStyle = "#FFF";
+            context.fillRect(x, y, paddleWidth, paddleHeight);
+        }
+
+        function drawBall() {
+            context.beginPath();
+            context.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            context.fillStyle = "#FFF";
+            context.fill();
+            context.closePath();
+        }
+
+        function moveBall() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Ball collision with top and bottom
+            if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // Ball goes out on the right side (player loses)
+            if (ballX + ballRadius > canvas.width) {
+                resetBall();
+            }
+
+            // Ball goes out on the left side (AI loses)
+            if (ballX - ballRadius < 0) {
+                resetBall();
+            }
+
+            // Ball collision with player's paddle
+            if (
+                ballX - ballRadius < paddleWidth &&
+                ballY > playerY &&
+                ballY < playerY + paddleHeight
+            ) {
+                ballSpeedX = -ballSpeedX;
+            }
+
+            // Ball collision with AI's paddle
+            if (
+                ballX + ballRadius > canvas.width - paddleWidth &&
+                ballY > aiY &&
+                ballY < aiY + paddleHeight
+            ) {
+                ballSpeedX = -ballSpeedX;
+            }
+        }
+
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+            ballSpeedX = -ballSpeedX;
+            ballSpeedY = 4;
+        }
+
+        function movePaddles() {
+            if (upPressed && playerY > 0) {
+                playerY -= playerSpeed;
+            } else if (downPressed && playerY < canvas.height - paddleHeight) {
+                playerY += playerSpeed;
+            }
+
+            // Simple AI movement
+            if (aiY + paddleHeight / 2 < ballY) {
+                aiY += aiSpeed;
+            } else if (aiY + paddleHeight / 2 > ballY) {
+                aiY -= aiSpeed;
+            }
+        }
+
+        function draw() {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            drawPaddle(0, playerY);
+            drawPaddle(canvas.width - paddleWidth, aiY);
+            drawBall();
+            moveBall();
+            movePaddles();
+        }
+
+        function gameLoop() {
+            if (gameRunning) {
+                draw();
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+
+        // Button Controls
+        document.getElementById("startBtn").addEventListener("click", () => {
+            if (!gameRunning) {
+                gameRunning = true;
+                gameLoop();
+            }
+        });
+
+        document.getElementById("pauseBtn").addEventListener("click", () => {
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId);
+        });
+
+        document.getElementById("resumeBtn").addEventListener("click", () => {
+            if (!gameRunning) {
+                gameRunning = true;
+                gameLoop();
+            }
+        });
+    </script>
 </body>
 </html>
